@@ -1,6 +1,13 @@
 package com.countingapp.calculator;
 
+import android.content.Context;
+import android.media.AudioAttributes;
+import android.media.SoundPool;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -13,6 +20,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean lastIsOperator = false;
     private boolean lastIsEquals = false;
 
+    private Vibrator vibrator;
+    private SoundPool soundPool;
+    private int soundClick;
+    private int soundEquals;
+    private int soundClear;
+    private boolean soundsLoaded = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -21,9 +35,69 @@ public class MainActivity extends AppCompatActivity {
         tvExpression = findViewById(R.id.tvExpression);
         tvResult = findViewById(R.id.tvResult);
 
+        initVibrator();
+        initSoundPool();
+
         setupNumberButtons();
         setupOperatorButtons();
         setupSpecialButtons();
+    }
+
+    private void initVibrator() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            VibratorManager vm = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            vibrator = vm.getDefaultVibrator();
+        } else {
+            vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        }
+    }
+
+    private void initSoundPool() {
+        AudioAttributes attrs = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+        soundPool = new SoundPool.Builder()
+                .setMaxStreams(3)
+                .setAudioAttributes(attrs)
+                .build();
+        soundPool.setOnLoadCompleteListener((sp, id, status) -> {
+            if (status == 0) soundsLoaded = true;
+        });
+        soundClick = soundPool.load(this, R.raw.click, 1);
+        soundEquals = soundPool.load(this, R.raw.equals_sound, 1);
+        soundClear = soundPool.load(this, R.raw.clear, 1);
+    }
+
+    private void performHaptic(int type) {
+        if (vibrator == null || !vibrator.hasVibrator()) return;
+        switch (type) {
+            case 0: // light tap for numbers
+                vibrator.vibrate(VibrationEffect.createOneShot(20, 80));
+                break;
+            case 1: // medium tap for operators
+                vibrator.vibrate(VibrationEffect.createOneShot(30, 120));
+                break;
+            case 2: // strong tap for equals
+                vibrator.vibrate(VibrationEffect.createOneShot(40, 180));
+                break;
+            case 3: // double tap for clear
+                long[] pattern = {0, 25, 50, 25};
+                int[] amplitudes = {0, 120, 0, 120};
+                vibrator.vibrate(VibrationEffect.createWaveform(pattern, amplitudes, -1));
+                break;
+        }
+    }
+
+    private void playSound(int soundId) {
+        if (soundsLoaded) {
+            soundPool.play(soundId, 0.3f, 0.3f, 1, 0, 1.0f);
+        }
+    }
+
+    private void onButtonPress(int hapticType, int soundId) {
+        performHaptic(hapticType);
+        playSound(soundId);
     }
 
     private void setupNumberButtons() {
@@ -34,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
 
         for (int id : numIds) {
             findViewById(id).setOnClickListener(v -> {
+                onButtonPress(0, soundClick);
                 if (lastIsEquals) {
                     expression = "";
                     lastIsEquals = false;
@@ -49,9 +124,9 @@ public class MainActivity extends AppCompatActivity {
     private void setupOperatorButtons() {
         View.OnClickListener opListener = v -> {
             if (expression.isEmpty()) return;
+            onButtonPress(1, soundClick);
             String op = ((Button) v).getText().toString();
 
-            // Convert display symbols to actual operators for evaluation
             if (lastIsOperator) {
                 expression = expression.substring(0, expression.length() - 1);
             }
@@ -71,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupSpecialButtons() {
         // Clear
         findViewById(R.id.btnClear).setOnClickListener(v -> {
+            onButtonPress(3, soundClear);
             expression = "";
             lastIsOperator = false;
             lastIsEquals = false;
@@ -80,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Decimal point
         findViewById(R.id.btnDot).setOnClickListener(v -> {
+            onButtonPress(0, soundClick);
             if (lastIsEquals) {
                 expression = "0";
                 lastIsEquals = false;
@@ -98,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
         // Plus/Minus toggle
         findViewById(R.id.btnPlusMinus).setOnClickListener(v -> {
             if (expression.isEmpty()) return;
+            onButtonPress(1, soundClick);
             expression = toggleSign(expression);
             updateDisplay();
         });
@@ -105,6 +183,7 @@ public class MainActivity extends AppCompatActivity {
         // Percent
         findViewById(R.id.btnPercent).setOnClickListener(v -> {
             if (expression.isEmpty()) return;
+            onButtonPress(1, soundClick);
             try {
                 double val = evaluateExpression(expression);
                 val = val / 100.0;
@@ -115,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Parentheses
         findViewById(R.id.btnParens).setOnClickListener(v -> {
+            onButtonPress(0, soundClick);
             if (lastIsEquals) {
                 expression = "";
                 lastIsEquals = false;
@@ -135,8 +215,8 @@ public class MainActivity extends AppCompatActivity {
         // Equals
         findViewById(R.id.btnEquals).setOnClickListener(v -> {
             if (expression.isEmpty()) return;
+            onButtonPress(2, soundEquals);
             try {
-                // Close any open parentheses
                 int openCount = countChar(expression, '(');
                 int closeCount = countChar(expression, ')');
                 String expr = expression;
@@ -158,13 +238,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateDisplay() {
         tvExpression.setText(expression);
-        // Try to show live result
         try {
             String expr = expression;
             if (lastIsOperator) {
                 expr = expr.substring(0, expr.length() - 1);
             }
-            // Close open parentheses for evaluation
             int openCount = countChar(expr, '(');
             int closeCount = countChar(expr, ')');
             for (int i = 0; i < openCount - closeCount; i++) {
@@ -191,7 +269,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String toggleSign(String expr) {
-        // Find the last number and toggle its sign
         int i = expr.length() - 1;
         while (i >= 0 && (Character.isDigit(expr.charAt(i)) || expr.charAt(i) == '.')) {
             i--;
@@ -222,9 +299,7 @@ public class MainActivity extends AppCompatActivity {
         return String.valueOf(val);
     }
 
-    // Simple expression evaluator supporting +, -, ×, ÷, and parentheses
     private double evaluateExpression(String expr) {
-        // Replace display symbols with standard operators
         expr = expr.replace("×", "*").replace("÷", "/");
         return new ExpressionParser(expr).parse();
     }
@@ -286,10 +361,10 @@ public class MainActivity extends AppCompatActivity {
 
         private double parsePrimary() {
             if (pos < expr.length() && expr.charAt(pos) == '(') {
-                pos++; // skip '('
+                pos++;
                 double result = parseAddSub();
                 if (pos < expr.length() && expr.charAt(pos) == ')') {
-                    pos++; // skip ')'
+                    pos++;
                 }
                 return result;
             }
@@ -300,6 +375,15 @@ public class MainActivity extends AppCompatActivity {
             }
             if (start == pos) throw new RuntimeException("Unexpected end of expression");
             return Double.parseDouble(expr.substring(start, pos));
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (soundPool != null) {
+            soundPool.release();
+            soundPool = null;
         }
     }
 }

@@ -2,38 +2,52 @@
 <resources>
 
     <style name="Theme.Calculator" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#FF9800</item>
-        <item name="colorPrimaryVariant">#F57C00</item>
-        <item name="android:statusBarColor">#1C1C1C</item>
-        <item name="android:navigationBarColor">#1C1C1C</item>
+        <item name="colorPrimary">@color/accent_purple</item>
+        <item name="colorPrimaryVariant">@color/accent_violet</item>
+        <item name="android:statusBarColor">@color/bg_primary</item>
+        <item name="android:navigationBarColor">@color/bg_primary</item>
+        <item name="android:windowBackground">@color/bg_primary</item>
     </style>
 
-    <style name="CalcButtonBase">
+    <style name="CalcButtonBase" parent="Widget.MaterialComponents.Button">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">0dp</item>
         <item name="android:layout_columnWeight">1</item>
         <item name="android:layout_rowWeight">1</item>
-        <item name="android:layout_margin">4dp</item>
-        <item name="android:textSize">22sp</item>
+        <item name="android:layout_margin">5dp</item>
+        <item name="android:textSize">24sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
-        <item name="cornerRadius">24dp</item>
+        <item name="cornerRadius">20dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="elevation">6dp</item>
+        <item name="rippleColor">#40FFFFFF</item>
     </style>
 
-    <style name="CalcButtonDark" parent="CalcButtonBase">
-        <item name="android:backgroundTint">#333333</item>
-        <item name="android:textColor">#FFFFFF</item>
+    <style name="CalcButtonNumber" parent="CalcButtonBase">
+        <item name="android:backgroundTint">@color/btn_number</item>
+        <item name="android:textColor">@color/text_primary</item>
     </style>
 
-    <style name="CalcButtonGray" parent="CalcButtonBase">
-        <item name="android:backgroundTint">#505050</item>
-        <item name="android:textColor">#FFFFFF</item>
+    <style name="CalcButtonFunction" parent="CalcButtonBase">
+        <item name="android:backgroundTint">@color/btn_function</item>
+        <item name="android:textColor">@color/text_function</item>
+        <item name="android:textSize">20sp</item>
     </style>
 
-    <style name="CalcButtonOrange" parent="CalcButtonBase">
-        <item name="android:backgroundTint">#FF9800</item>
-        <item name="android:textColor">#FFFFFF</item>
+    <style name="CalcButtonOperator" parent="CalcButtonBase">
+        <item name="android:backgroundTint">@color/btn_operator</item>
+        <item name="android:textColor">@color/accent_purple</item>
+        <item name="android:textSize">26sp</item>
+    </style>
+
+    <style name="CalcButtonEquals" parent="CalcButtonBase">
+        <item name="android:backgroundTint">@color/accent_purple</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">28sp</item>
+        <item name="elevation">8dp</item>
     </style>
 
 </resources>
